@@ -69,10 +69,6 @@ contract InvalidERC20 {
         return _totalSupply;
     }
 
-    // function balanceOf(address owner_) public view returns (uint256) {
-    //     return _balances[owner_];
-    // }
-
     function allowance(address owner_, address _spender)
         public
         view
@@ -147,7 +143,6 @@ contract InvalidERC20 {
         require(_sender != _recipient, "Invalid Recipient");
         _balances[_sender] -= _amount;
         _balances[_recipient] += _amount;
-        // emit Transfer(_sender, _recipient, _amount);
         return true;
     }
 

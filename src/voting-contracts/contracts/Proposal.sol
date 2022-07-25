@@ -92,7 +92,7 @@ contract Proposal is Pausable {
 
     /// proposal details are editable till start block height is not reached
     modifier isEditable() {
-        if (proposal.startBlock <= block.number) {
+        if (block.number >= proposal.startBlock) {
             revert EditPeriodOver();
         }
         _;

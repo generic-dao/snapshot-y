@@ -2,8 +2,8 @@ const truffleAssert = require("truffle-assertions");
 const { BN } = require("@openzeppelin/test-helpers");
 const { expect } = require("chai");
 const Strategies = artifacts.require("Strategies");
-const ValidToken = artifacts.require("SampleERC20");
-const InValidToken = artifacts.require("CorruptERC20");
+const ValidToken = artifacts.require("ValidERC20");
+const InValidToken = artifacts.require("InvalidERC20");
 /*
  * uncomment accounts to access the test accounts made available by the
  * Ethereum client

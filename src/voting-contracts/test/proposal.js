@@ -1,12 +1,12 @@
 const Proposal = artifacts.require("Proposal");
-const { BN, expectRevert, time } = require("@openzeppelin/test-helpers");
-const expectEvent = require("@openzeppelin/test-helpers/src/expectEvent");
-const { web3 } = require("@openzeppelin/test-helpers/src/setup");
+const Strategies = artifacts.require("Strategies");
 const truffleAssert = require("truffle-assertions");
+const expectEvent = require("@openzeppelin/test-helpers/src/expectEvent");
+const { BN, expectRevert, time } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const { expect } = require("chai");
 
 contract("Proposal", function (accounts) {
-  const strategies = "0xDA8b3fa22c950D43507c2fF750EbF5E6C368312E";
   const guid = "0x1234567890ABCDEF";
   const title = "Proposal";
   const uri = "https://sample.com/file1";
@@ -22,7 +22,7 @@ contract("Proposal", function (accounts) {
     before(async () => {
       await this.proposal.init(
         accounts[0],
-        strategies,
+        Strategies.address,
         guid,
         title,
         uri,
@@ -42,7 +42,7 @@ contract("Proposal", function (accounts) {
       await expectRevert.unspecified(
         this.proposal.init(
           accounts[1],
-          strategies,
+          Strategies.address,
           guid,
           title,
           uri,
@@ -165,7 +165,6 @@ contract("Proposal", function (accounts) {
 
 contract("Proposal", function (accounts) {
   const guid = "0x1234567890ABCDEF";
-  const strategies = "0xDA8b3fa22c950D43507c2fF750EbF5E6C368312E";
   const title = "Proposal";
   const uri = "https://sample.com/file1";
   const votingOptions = ["agree", "disagree", "abstain"];
@@ -180,7 +179,7 @@ contract("Proposal", function (accounts) {
     before(async () => {
       await this.proposal.init(
         accounts[0],
-        strategies,
+        Strategies.address,
         guid,
         title,
         uri,
@@ -229,11 +228,9 @@ contract("Proposal", function (accounts) {
 });
 
 contract("Proposal", function (accounts) {
-  // NOTE: Update contract address when migrations updated
-  const strategies = "0xDA8b3fa22c950D43507c2fF750EbF5E6C368312E";
   const guid = "0x1234567890ABCDEF";
   const title = "TestContract";
-  const uri = "https://www.google.com/";
+  const uri = "https://sample.com/file1";
   const votingOptions = ["yes", "no", "neutral"];
   const owner = accounts[0];
   const invalidOwner = accounts[1];
@@ -250,7 +247,7 @@ contract("Proposal", function (accounts) {
     endBlock = startBlock.addn(endBlockOffset);
     await proposalInstance.init(
       owner,
-      strategies,
+      Strategies.address,
       guid,
       title,
       uri,
@@ -318,7 +315,7 @@ contract("Proposal", function (accounts) {
       );
     });
 
-    it("should not set voting options  current block has passed starting block ", async function () {
+    it("should not set voting options current block has passed starting block ", async function () {
       await time.advanceBlockTo(startBlock);
       await truffleAssert.reverts(
         proposalInstance.setVotingOptions.call(updatedVotingOptions, {
