@@ -21,9 +21,9 @@ contract Proposal is Pausable {
     }
 
     struct Vote {
-        string votingOption;
-        uint256 votingPower;
-        bool hasVoted;
+        string[] selection;
+        uint256 power;
+        bool voted;
     }
 
     ProposalDetails internal proposal;
@@ -36,7 +36,7 @@ contract Proposal is Pausable {
     uint256 private totalVotes;
 
     mapping(address => Vote) public votes;
-    mapping(string => uint256) public optionCounts;
+    mapping(string => uint256) public votesPerOption;
 
     error Unauthorized(string reason);
     error AlreadyInitialized();
@@ -44,7 +44,7 @@ contract Proposal is Pausable {
     error IncorrectParams(string reason);
     error VotingError(string reason);
 
-    event VoteCast(address voter, string choice, uint256 votingPower);
+    event VoteCast(address voter, string choice, uint256 power);
 
     constructor() Pausable() {}
 
@@ -94,6 +94,24 @@ contract Proposal is Pausable {
     modifier isEditable() {
         if (block.number >= proposal.startBlock) {
             revert EditPeriodOver();
+        }
+        _;
+    }
+
+    modifier votingPeriodActive() {
+        if(block.number < proposal.startBlock) {
+            revert VotingError('voting period has not started');
+        }
+
+        if(block.number > proposal.stopBlock) {
+            revert VotingError('voting period over');
+        }
+        _;
+    }
+
+    modifier alreadyVoted() {
+        if (votes[msg.sender].voted) {
+            revert VotingError("Already Voted");
         }
         _;
     }
@@ -218,26 +236,30 @@ contract Proposal is Pausable {
     function castSingleChoiceVote(string memory _choice)
         external
         whenNotPaused
+        alreadyVoted
+        votingPeriodActive
     {
-        if (votes[msg.sender].hasVoted) {
-            revert VotingError("Already Voted");
-        }
-
         if (indexOfVotingOptions(_choice) < 0) {
             revert VotingError("Wrong voting option");
         }
-        if (isVotingPeriodNotActive()) {
-            revert VotingError("Voting period not active");
-        }
-
+        // evaluate voting and gating strategies selected for proposal
         bool canVote = strategies.evaluateGatingStrategies(msg.sender);
         if (!canVote) {
             revert VotingError("Not eligible for voting");
         }
         uint256 power = strategies.evaluateVotingPower(msg.sender);
-        votes[msg.sender] = Vote(_choice, power, true);
-        optionCounts[_choice] += power;
+        // create a choice list with voter's selected option 
+        // note: this is addded to keep same vote struct for 
+        // for different voting types 
+        string[] memory orderedChoiceList = new string[](1);
+        orderedChoiceList[0] = _choice;
+        // add vote in mapping
+        votes[msg.sender] = Vote(orderedChoiceList, power, true);
+        // udapte votin options tally
+        votesPerOption[_choice] += power;
+        // update overall number of votes
         totalVotes += power;
+        // emit vote event
         emit VoteCast(msg.sender, _choice, power);
     }
 
@@ -257,14 +279,9 @@ contract Proposal is Pausable {
         return -1;
     }
 
-    function isVotingPeriodNotActive() private view returns (bool) {
-        return (block.number < proposal.startBlock ||
-            block.number > proposal.stopBlock);
-    }
-
     function checkVotingPeriod(uint256 _start, uint256 _stop) private view {
         if (_start < block.number || _start > _stop) {
-            revert IncorrectParams("Must be end > start > current");
+            revert IncorrectParams("Must be stop block > start block > current block");
         }
     }
 }
