@@ -44,7 +44,7 @@ contract Proposal is Pausable {
     error IncorrectParams(string reason);
     error VotingError(string reason);
 
-    event VoteCast(address voter, string choice, uint256 votingPower);
+    event VoteCast(string guid, address voter, string choice, uint256 votingPower);
 
     constructor() Pausable() {}
 
@@ -238,7 +238,7 @@ contract Proposal is Pausable {
         votes[msg.sender] = Vote(_choice, power, true);
         optionCounts[_choice] += power;
         totalVotes += power;
-        emit VoteCast(msg.sender, _choice, power);
+        emit VoteCast(proposal.guid, msg.sender, _choice, power);
     }
 
     function indexOfVotingOptions(string memory _option)

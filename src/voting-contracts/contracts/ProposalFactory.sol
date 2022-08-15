@@ -8,7 +8,7 @@ import "./Proposal.sol";
 contract ProposalFactory {
     address private proposalImplementation;
 
-    event CreatedProposal(address clonedProposal);
+    event CreatedProposal(string guid, address clonedProposal);
 
     constructor(address _implementation) {
         // proposalImplementation = address(new Proposal());
@@ -40,7 +40,7 @@ contract ProposalFactory {
             _stopOffset,
             _votingType
         );
-        emit CreatedProposal(clonedProposal);
+        emit CreatedProposal(_guid, clonedProposal);
         return clonedProposal;
     }
 }
