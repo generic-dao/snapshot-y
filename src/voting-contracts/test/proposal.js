@@ -446,7 +446,7 @@ contract("Proposal", function (accounts) {
     });
   });
 
-  describe("cast single vote", function () {
+  describe("cast single choice vote", function () {
     const voter = accounts[2];
 
     beforeEach("should setup the contract proposal instance", async () => {
@@ -502,4 +502,61 @@ contract("Proposal", function (accounts) {
       );
     });
   });
+
+  /**
+   * cast 10 votes with random choice options 
+   */
+  async function castRankedChoiceVotes() {
+
+    let len = votingOptions.length;
+    let vote = Array();
+    
+    // cast one vote from each account
+    for(let i = 0; i < accounts.length; i++) {
+      // generate random vote 
+      while (vote.length < len) {
+        r = votingOptions[Math.floor(Math.random() * len)];
+          if (vote.indexOf(r) === -1) vote.push(r);
+      }
+      
+      console.log(vote);
+
+      // cast vote
+      await proposalInstance.rankedChoiceVote(vote, {from: accounts[i]});
+
+      // clear vote array 
+      vote.length = 0;
+    }
+  }
+
+  describe("ranked choice vote", function () {
+    
+    beforeEach("should setup the contract proposal instance", async () => {
+      await initContract();
+      await proposalInstance.setRankedChoiceVotingDetails(votingOptions.length);
+    });
+    
+    it("should allow voters to cast vote", async function () {
+      const voter = accounts[2];
+      const vote = ["no", "neutral", "yes"];
+      
+      await time.advanceBlockTo(startBlock);
+      this.receipt = await proposalInstance.rankedChoiceVote(vote, {from: voter});
+      return expectEvent(this.receipt, "VoteCast", {voter: voter, choice: vote, power: new BN(1)});
+    });
+  });
+
+  describe("ranked choice vote (bulk votes)", function () {
+    
+    beforeEach(async () => {
+      await initContract();
+      await proposalInstance.setRankedChoiceVotingDetails(votingOptions.length);
+    });
+    
+    it("should allow multiple votes", async function () {
+      await time.advanceBlockTo(startBlock);
+      await castRankedChoiceVotes();
+    });
+  });
+
 });

@@ -10,6 +10,11 @@ contract Proposal is Pausable {
         RankedChoiceVoting
     }
 
+    struct RankedChoiceVotingDetails {
+        // voter can choose this many options 
+        uint maxNumberOfOptionsToSelect;
+    }
+
     struct ProposalDetails {
         string guid;
         string title;
@@ -28,6 +33,7 @@ contract Proposal is Pausable {
 
     ProposalDetails internal proposal;
     IStrategies private strategies;
+    RankedChoiceVotingDetails private rcvDetails;
 
     address private owner;
 
@@ -44,7 +50,7 @@ contract Proposal is Pausable {
     error IncorrectParams(string reason);
     error VotingError(string reason);
 
-    event VoteCast(address voter, string choice, uint256 power);
+    event VoteCast(address voter, string[] choice, uint256 power);
 
     constructor() Pausable() {}
 
@@ -99,11 +105,11 @@ contract Proposal is Pausable {
     }
 
     modifier votingPeriodActive() {
-        if(block.number < proposal.startBlock) {
+        if (block.number < proposal.startBlock) {
             revert VotingError('voting period has not started');
         }
 
-        if(block.number > proposal.stopBlock) {
+        if (block.number > proposal.stopBlock) {
             revert VotingError('voting period over');
         }
         _;
@@ -212,6 +218,20 @@ contract Proposal is Pausable {
         proposal.votingType = _votingType;
     }
 
+    function setRankedChoiceVotingDetails(uint maxChoicesToSelect) 
+        external 
+        onlyOwner 
+        isEditable 
+    {
+        if (maxChoicesToSelect < 2) {
+            revert VotingError('allow more than 1 options, or use single choice voting');
+        }
+        if (maxChoicesToSelect > proposal.votingOptions.length) {
+            revert VotingError('cannot set to more than available options');
+        }
+        rcvDetails.maxNumberOfOptionsToSelect = maxChoicesToSelect;
+    }
+
     function updateProposalDetails(
         string memory _guid,
         string memory _title,
@@ -233,6 +253,66 @@ contract Proposal is Pausable {
         );
     }
 
+    function calculateRankedChoiceVotesResult() 
+        external 
+        view
+        whenNotPaused 
+        returns (string memory)
+    {
+        string memory optionWithMinVotes = proposal.votingOptions[0];
+
+        // should run after voting period is over
+        if (block.number <= proposal.stopBlock) {
+            revert VotingError('voting is not completed');
+        }
+
+        // check if any option has more than 50% voting power 
+        for (uint8 i = 0; i < proposal.votingOptions.length; i++) {
+            if (votesPerOption[proposal.votingOptions[i]] >=  totalVotes / 2) {
+                return proposal.votingOptions[i];
+            } 
+            // else update min voted choice 
+            if (votesPerOption[optionWithMinVotes] > votesPerOption[proposal.votingOptions[i]]) {
+                optionWithMinVotes = proposal.votingOptions[i];
+            }
+        }
+
+        // start eliminating from last candidate 
+
+
+
+        return proposal.votingOptions[0];
+    }
+
+    function rankedChoiceVote(string[] memory orderedChoiceList) 
+        external
+        whenNotPaused
+        alreadyVoted
+        votingPeriodActive
+    {
+        // TODO: verify choices list 
+
+        // verify list size 
+        if (orderedChoiceList.length > rcvDetails.maxNumberOfOptionsToSelect) {
+            revert VotingError("too many options selected");
+        }
+        
+        // evaluate voting and gating strategies selected for proposal
+        if (!strategies.evaluateGatingStrategies(msg.sender)) {
+            revert VotingError("failed selected strategy");
+        }
+        uint256 power = strategies.evaluateVotingPower(msg.sender);
+
+        // add vote in mapping
+        votes[msg.sender] = Vote(orderedChoiceList, power, true);
+        // udapte voting options tally
+        votesPerOption[orderedChoiceList[0]] += power;
+        // update overall number of votes
+        totalVotes += power;
+        // emit vote event
+        emit VoteCast(msg.sender, orderedChoiceList, power);
+    }
+
     function castSingleChoiceVote(string memory _choice)
         external
         whenNotPaused
@@ -240,7 +320,7 @@ contract Proposal is Pausable {
         votingPeriodActive
     {
         if (indexOfVotingOptions(_choice) < 0) {
-            revert VotingError("Wrong voting option");
+            revert VotingError("invalid voting option");
         }
         // evaluate voting and gating strategies selected for proposal
         bool canVote = strategies.evaluateGatingStrategies(msg.sender);
@@ -255,12 +335,12 @@ contract Proposal is Pausable {
         orderedChoiceList[0] = _choice;
         // add vote in mapping
         votes[msg.sender] = Vote(orderedChoiceList, power, true);
-        // udapte votin options tally
+        // udapte voting options tally
         votesPerOption[_choice] += power;
         // update overall number of votes
         totalVotes += power;
         // emit vote event
-        emit VoteCast(msg.sender, _choice, power);
+        emit VoteCast(msg.sender, orderedChoiceList, power);
     }
 
     function indexOfVotingOptions(string memory _option)
