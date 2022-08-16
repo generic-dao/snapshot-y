@@ -142,6 +142,10 @@ contract Proposal is Pausable {
         );
     }
 
+    function getTotalVotes() external view returns(uint256) {
+        return totalVotes;
+    }
+
     function setProposalTitle(string memory _title)
         external
         onlyOwner
