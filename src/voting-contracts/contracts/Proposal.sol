@@ -38,12 +38,6 @@ contract Proposal is Pausable {
     mapping(address => Vote) public votes;
     mapping(string => uint256) public optionCounts;
 
-    error Unauthorized(string reason);
-    error AlreadyInitialized();
-    error EditPeriodOver();
-    error IncorrectParams(string reason);
-    error VotingError(string reason);
-
     event VoteCast(string guid, address voter, string choice, uint256 votingPower);
 
     constructor() Pausable() {}
@@ -65,9 +59,7 @@ contract Proposal is Pausable {
         uint256 _stopOffset,
         VotingTypes _votingType
     ) external {
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
+        require(!initialized, 'Already initialized');
         uint256 _startBlock = block.number + _startOffset;
         owner = _owner;
         strategies = IStrategies(_strategiesContract);
@@ -84,17 +76,13 @@ contract Proposal is Pausable {
     }
 
     modifier onlyOwner() {
-        if (owner != msg.sender) {
-            revert Unauthorized("Only owner");
-        }
+        require(owner == msg.sender, 'Only owner');
         _;
     }
 
     /// proposal details are editable till start block height is not reached
     modifier isEditable() {
-        if (block.number >= proposal.startBlock) {
-            revert EditPeriodOver();
-        }
+        require(block.number < proposal.startBlock, 'proposal editing period is over');
         _;
     }
 
@@ -223,21 +211,11 @@ contract Proposal is Pausable {
         external
         whenNotPaused
     {
-        if (votes[msg.sender].hasVoted) {
-            revert VotingError("Already Voted");
-        }
+        require(!votes[msg.sender].hasVoted, 'Already Voted');
+        require(indexOfVotingOptions(_choice) >= 0, 'Invalid choice selected');
+        require(!isVotingPeriodNotActive(), 'Voting period is not active');
+        require(strategies.evaluateGatingStrategies(msg.sender), 'Not eligible to vote');
 
-        if (indexOfVotingOptions(_choice) < 0) {
-            revert VotingError("Wrong voting option");
-        }
-        if (isVotingPeriodNotActive()) {
-            revert VotingError("Voting period not active");
-        }
-
-        bool canVote = strategies.evaluateGatingStrategies(msg.sender);
-        if (!canVote) {
-            revert VotingError("Not eligible for voting");
-        }
         uint256 power = strategies.evaluateVotingPower(msg.sender);
         votes[msg.sender] = Vote(_choice, power, true);
         optionCounts[_choice] += power;
@@ -267,8 +245,6 @@ contract Proposal is Pausable {
     }
 
     function checkVotingPeriod(uint256 _start, uint256 _stop) private view {
-        if (_start < block.number || _start > _stop) {
-            revert IncorrectParams("Must be end > start > current");
-        }
+        require(_start > block.number && _stop > _start, 'Must be endblock > startblock > current block');
     }
 }

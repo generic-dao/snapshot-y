@@ -6,12 +6,9 @@ import "../../node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
 contract ERC721Strategies {
 
   error ERC721Error(string err);
-  error ZeroAddress();
 
   modifier zeroAddress(address addr) {
-    if(addr == address(0)) {
-      revert ZeroAddress();
-    }
+    require(addr != address(0), 'zero address');
     _;
   }
 
