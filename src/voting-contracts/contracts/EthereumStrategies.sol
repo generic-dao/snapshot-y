@@ -2,13 +2,9 @@
 pragma solidity 0.8.15;
 
 contract EthereumStrategies {
-  
-  error ZeroAddress();
 
   modifier zeroAddress(address addr) {
-    if(addr == address(0)) {
-      revert ZeroAddress();
-    }
+    require(addr != address(0), 'zero address');
     _;
   }
 
