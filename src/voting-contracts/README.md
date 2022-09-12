@@ -9,3 +9,7 @@ provider uri from Infura API
    ```sh
    truffle networks 
    ```
+4. For contract sizes 
+   ```sh
+   truffle run contract-size
+   ```

@@ -18,7 +18,8 @@
     "@openzeppelin/test-helpers": "^0.5.15",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
-    "solhint": "^3.3.7"
+    "solhint": "^3.3.7",
+    "truffle-contract-size": "^2.0.1"
   },
   "dependencies": {
     "@truffle/hdwallet-provider": "^2.0.14",
